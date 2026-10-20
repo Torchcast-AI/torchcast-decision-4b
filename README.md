@@ -5,6 +5,20 @@ A text-based decision model developed by **Torchcast AI**, based on Qwen3.5-4B. 
 
 [Model card and weights](https://huggingface.co/torchcast-ai/torchcast-decision-4b/tree/v1.2.0)
 
+## Results
+
+On the JevBench leaderboard (release v1.6.34, as of 2026-10-20), Torchcast Decision 4B v1.2 is
+**#1 among open-weight models by composite score**:
+
+| Model | Composite | Intelligence | Calibration | Speed | Cost |
+|---|---|---|---|---|---|
+| **Torchcast Decision 4B v1.2** | **73.03** | 60.26 | 84.95 | 91.13 | 64.81 |
+| H2O-Lightning-4B v1.1 | 72.52 | 60.04 | 89.95 | 92.61 | 60.30 |
+
+Source: [benchmarkheaven.com/jev-models](https://benchmarkheaven.com/jev-models). v1.2 was measured on the
+second regular v1.6 draw (anchor runs pending), so scores may be re-placed when the board's anchor
+offsets are applied.
+
 ## Run for evaluation
 
 Linux with one NVIDIA GPU (tested on one H200 141 GB and one A40 48 GB, BF16). The weights repository contains the
