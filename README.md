@@ -7,29 +7,36 @@ A text-based decision model developed by **Torchcast AI**, based on Qwen3.5-4B. 
 
 ## What changed in v1.3
 
-- **Weights:** a new full fine-tune of `Qwen/Qwen3.5-4B` (revision `851bf6e8`) on a new training data mix. The
-  architecture, tokenizer, prompt format and non-causal attention mode are the same as in v1.2.
+- **Weights:** a new full fine-tune of `Qwen/Qwen3.5-4B` (revision `851bf6e8`, same recipe as v1.2, 3,505 steps) on a
+  new training data mix of 897,139 rows: the earlier v1.3 build's 878,791 rows plus 18,348 new rows from a further
+  non-Claude data block, with 29,385 question-bank rows reworded by MiniMax, re-smoothed targets for easy and standard
+  items (label smoothing 0.1 to 0.03 on 267,530 rows) and 18,877 paired twin items placed in the same batches. The
+  architecture, tokenizer, prompt format (`jev_render_v3`) and non-causal attention mode are the same as in v1.2.
 - **Speed:** the non-causal mode now runs with CUDA graphs (`torchcast_decision/model.py`). Each graph records a
   key-padding mask for its rows and uses the same padded lengths as the eager path, so it replays the kernels v1.2 ran
-  eagerly and gives bit-identical probabilities. Median latency per request on one A40: 67.9 ms (v1.2 code) to 31.9 ms.
-- **Serving temperature:** the bundled `decision_config.json` sets T = 0.9 for choice, yes/no and score questions
-  (v1.2: T = 1.0).
+  eagerly: probabilities are bit-identical to the eager path, and the median latency per request is about half
+  (67.9 ms to 31.9 ms on one A40). `/health` reports the number of recorded graphs (`cuda_graphs`).
+- **Serving temperature:** `decision_config.json` sets T = 0.9 for choice, yes/no and score questions (v1.2: T = 1.0).
+
+An earlier private v1.3 build (FULL_v5 weights, commit `a12df784` of the weights repository) is superseded by these weights;
+it remains in that repository's history.
 
 ## Results
 
 v1.3 has not been measured on the JevBench leaderboard yet.
 
-Our own reads, paired against v1.2 in the same harness (the bundled server and the JevBench `typesafe` adapter, one
-GPU type), on the 231 public JevBench items:
+Our own reads, paired in the same harness (the bundled server or its offline equivalent and the JevBench `typesafe`
+adapter), all at T = 0.9, against the earlier v1.3 build (FULL_v5 weights):
 
-| Model | Temperature | Intelligence | Calibration | Capability |
-|---|---|---|---|---|
-| Torchcast Decision 4B v1.2 | 1.0 (as shipped) | 72.8 | 81.8 | 77.3 |
-| Torchcast Decision 4B v1.3 | 1.0 | 74.8 | 84.9 | 79.8 |
-| **Torchcast Decision 4B v1.3** | **0.9 (as shipped)** | **75.5** | **87.6** | **81.55** |
+| Set | Earlier v1.3 build (Capability) | v1.3 (Capability) | v1.3 Intelligence / Calibration |
+|---|---|---|---|
+| 231 public JevBench items | 81.55 | 81.4 | 74.9 / 87.9 |
+| Held-out proxy set (proxyA2) | 74.4 | 75.3 | |
+| Independent JevBench replica (2,178 items) | 78.7 | **82.1** (+3.5, significant) | +3.4 / +3.5 over the earlier build (both significant) |
 
-On our held-out proxy set (proxyA2), v1.3 scores +2.9 Intelligence over v1.2 (statistically significant). These
-are our measurements on public or internal items, not leaderboard scores.
+On the public items and our Proxy C set, v1.3 is level with the earlier build; the gain is on the independent
+replica. On the public items, v1.2 at the same T = 0.9 scores Capability 80.3 (as shipped, at T = 1.0: 77.3), against
+81.4 for v1.3. These are our measurements on public or internal items, not leaderboard scores.
 
 ### v1.2 (history)
 
