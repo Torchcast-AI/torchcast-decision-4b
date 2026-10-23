@@ -3,7 +3,7 @@
 A text-based decision model developed by **Torchcast AI**, based on Qwen3.5-4B. It returns yes/no probabilities
 (`noul`), choice distributions (`choice`) and ordinal score distributions (`score`) through a TypeSafe-compatible API.
 
-[Model card and weights](https://huggingface.co/torchcast-ai/torchcast-decision-4b-v1.3/tree/v1.3.0)
+[Model card and weights](https://huggingface.co/torchcast-ai/torchcast-decision-4b/tree/v1.3.0)
 
 ## What changed in v1.3
 
@@ -16,10 +16,11 @@ A text-based decision model developed by **Torchcast AI**, based on Qwen3.5-4B. 
   key-padding mask for its rows and uses the same padded lengths as the eager path, so it replays the kernels v1.2 ran
   eagerly: probabilities are bit-identical to the eager path, and the median latency per request is about half
   (67.9 ms to 31.9 ms on one A40). `/health` reports the number of recorded graphs (`cuda_graphs`).
+- **Memory:** the server keeps only the option-letter rows of the output head (1.18 GiB less GPU memory allocated after
+  loading; probabilities unchanged).
 - **Serving temperature:** `decision_config.json` sets T = 0.9 for choice, yes/no and score questions (v1.2: T = 1.0).
 
-An earlier private v1.3 build (FULL_v5 weights, commit `a12df784` of the weights repository) is superseded by these weights;
-it remains in that repository's history.
+An earlier internal v1.3 build (FULL_v5 weights) was not released; these weights supersede it.
 
 ## Results
 
@@ -67,14 +68,14 @@ pip install "transformers==5.8.1" "flash-linear-attention==0.5.2" accelerate saf
     ninja packaging wheel setuptools
 pip install --no-build-isolation "causal-conv1d>=1.7"
 
-hf download torchcast-ai/torchcast-decision-4b-v1.3 --revision v1.3.0 --local-dir torchcast-decision-4b-v1.3
+hf download torchcast-ai/torchcast-decision-4b --revision v1.3.0 --local-dir torchcast-decision-4b-v1.3
 cd torchcast-decision-4b-v1.3
 sha256sum -c SHA256SUMS
 python -m torchcast_decision.check .                 # fast kernels must be active
 python -m torchcast_decision.server --model . --host 127.0.0.1 --port 8011
 ```
 
-The pinned artifact is tag `v1.3.0` of `torchcast-ai/torchcast-decision-4b-v1.3`; weight SHA-256 values are in its
+The pinned artifact is tag `v1.3.0` of `torchcast-ai/torchcast-decision-4b`; weight SHA-256 values are in its
 `SHA256SUMS`.
 
 Check the served model name and that the CUDA graphs were recorded (`/health`: `"cuda_graphs"` above 0), then send a
