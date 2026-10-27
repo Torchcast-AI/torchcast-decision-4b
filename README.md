@@ -1,9 +1,9 @@
-# Torchcast Decision 4B (v1.3)
+# Torchcast Decision 4B (v1.3.1)
 
 A text-based decision model developed by **Torchcast AI**, based on Qwen3.5-4B. It returns yes/no probabilities
 (`noul`), choice distributions (`choice`) and ordinal score distributions (`score`) through a TypeSafe-compatible API.
 
-[Model card and weights](https://huggingface.co/torchcast-ai/torchcast-decision-4b/tree/v1.3.0)
+[Model card and weights](https://huggingface.co/torchcast-ai/torchcast-decision-4b/tree/v1.3.1)
 
 ## What changed in v1.3
 
@@ -14,6 +14,12 @@ A text-based decision model developed by **Torchcast AI**, based on Qwen3.5-4B. 
   (67.9 ms to 31.9 ms on one A40), with the same probabilities as the eager path.
 - **Memory:** about 1.2 GiB less GPU memory after loading.
 - **Serving settings:** updated in `decision_config.json`.
+
+**v1.3.1** (serving package only): the weights and `decision_config.json` are those of v1.3.0, and the probabilities
+are identical (bit for bit) to v1.3.0's. The serving package `torchcast_decision/` was rewritten by Torchcast AI; the
+server now answers every error with JSON and a status code (503 when the GPU runs out of memory, 500 for anything
+else) instead of closing the connection. The Apple Silicon (MLX) and GGUF backends, which could not run this model,
+were removed.
 
 ## Results
 
@@ -27,7 +33,7 @@ On the JevBench leaderboard (release v1.7.9, as of 2026-10-27), Torchcast Decisi
 | Torchcast Decision 4B v1.2 | 73.00 | 72.61 | 60.26 | 84.95 | 90.89 | 64.81 |
 
 Source: [benchmarkheaven.com/jev-models](https://benchmarkheaven.com/jev-models). Measured by the JevBench maintainers
-at revision `004acea2` (tag `v1.3.0`) with the bundled server and settings, on the second regular v1.6 draw (anchor
+at revision `004acea2` (tag `v1.3.0`; v1.3.1 has the same weights and probabilities) with the bundled server and settings, on the second regular v1.6 draw (anchor
 runs pending, so scores may be re-placed when the board's anchor offsets are applied).
 
 ## Run for evaluation
@@ -45,14 +51,14 @@ pip install "transformers==5.8.1" "flash-linear-attention==0.5.2" accelerate saf
     ninja packaging wheel setuptools
 pip install --no-build-isolation "causal-conv1d>=1.7"
 
-hf download torchcast-ai/torchcast-decision-4b --revision v1.3.0 --local-dir torchcast-decision-4b-v1.3
+hf download torchcast-ai/torchcast-decision-4b --revision v1.3.1 --local-dir torchcast-decision-4b-v1.3
 cd torchcast-decision-4b-v1.3
 sha256sum -c SHA256SUMS
 python -m torchcast_decision.check .                 # fast kernels must be active
 python -m torchcast_decision.server --model . --host 127.0.0.1 --port 8011
 ```
 
-The pinned artifact is tag `v1.3.0` of `torchcast-ai/torchcast-decision-4b`; weight SHA-256 values are in its
+The pinned artifact is tag `v1.3.1` of `torchcast-ai/torchcast-decision-4b` (same weights as tag `v1.3.0`, which the board measured); weight SHA-256 values are in its
 `SHA256SUMS`.
 
 Check the served model name and that the CUDA graphs were recorded (`/health`: `"cuda_graphs"` above 0), then send a
@@ -83,7 +89,9 @@ python -m jevbench.cli run \
 The bundled `decision_config.json` applies a calibration temperature T = 0.9 to every question type and a yes/no
 commit floor of 0.801 (neither changes the answer); prompts longer than 16,384 tokens keep the head and the tail of the state, as
 `/health` reports. Requests are served one at a time. Choice questions take 2 or more options (more than 26 are
-decided in groups); score questions take 2 to 10 levels (others are answered with HTTP 422). See the weights
+decided in groups); score questions take 2 to 10 levels (others are answered with HTTP 422). Every error is answered
+with a JSON body and a status code, and the connection is never dropped: 400 for a malformed body or image, 422 for a
+question the model cannot answer, 503 when the GPU runs out of memory, 500 for anything else. See the weights
 repository's `NOTICE`.
 
 The server listens on 127.0.0.1 by default; if the benchmark client runs on another machine, pass `--host 0.0.0.0`
@@ -100,6 +108,7 @@ flash-linear-attention 0.5.2, Triton 3.5.1, BF16), all 231 JevBench public items
 | CUDA graphs (v1.3 code) vs eager path (v1.2 code), same weights | 0 (bit-identical) | identical |
 | Server restart, warm Triton cache | 0 (bit-identical) | identical |
 | Fresh Triton cache (cold) vs warm | 0 (bit-identical) | identical |
+| v1.3.1 serving package vs v1.3.0 package, same weights (one A40 48 GB, 5,722 requests) | 0 (bit-identical) | identical |
 
 The linear-attention layers run Triton kernels that are normally autotuned: on a fresh cache each kernel times its
 candidate block configurations and keeps the fastest. Timing noise can select a different configuration, which changes
