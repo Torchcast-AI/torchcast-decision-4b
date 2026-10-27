@@ -7,51 +7,28 @@ A text-based decision model developed by **Torchcast AI**, based on Qwen3.5-4B. 
 
 ## What changed in v1.3
 
-- **Weights:** a new full fine-tune of `Qwen/Qwen3.5-4B` (revision `851bf6e8`, same recipe as v1.2, 3,505 steps) on a
-  new training data mix of 897,139 rows: the earlier v1.3 build's 878,791 rows plus 18,348 new rows from a further
-  non-Claude data block, with 29,385 question-bank rows reworded by MiniMax, re-smoothed targets for easy and standard
-  items (label smoothing 0.1 to 0.03 on 267,530 rows) and 18,877 paired twin items placed in the same batches. The
-  architecture, tokenizer, prompt format (`jev_render_v3`) and non-causal attention mode are the same as in v1.2.
-- **Speed:** the non-causal mode now runs with CUDA graphs (`torchcast_decision/model.py`). Each graph records a
-  key-padding mask for its rows and uses the same padded lengths as the eager path, so it replays the kernels v1.2 ran
-  eagerly: probabilities are bit-identical to the eager path, and the median latency per request is about half
-  (67.9 ms to 31.9 ms on one A40). `/health` reports the number of recorded graphs (`cuda_graphs`).
-- **Memory:** the server keeps only the option-letter rows of the output head (1.18 GiB less GPU memory allocated after
-  loading; probabilities unchanged).
-- **Serving temperature:** `decision_config.json` sets T = 0.9 for choice, yes/no and score questions (v1.2: T = 1.0).
-
-An earlier internal v1.3 build (FULL_v5 weights) was not released; these weights supersede it.
+- **Weights:** a new full fine-tune of `Qwen/Qwen3.5-4B` on an expanded training mix of public datasets (official
+  training splits) and synthetic decision data covering choice, yes/no and score questions. The
+  architecture, tokenizer, prompt format (`jev_render_v3`) and attention mode are the same as in v1.2.
+- **Speed:** the bundled server now uses CUDA graphs; median latency per request is about half that of v1.2
+  (67.9 ms to 31.9 ms on one A40), with the same probabilities as the eager path.
+- **Memory:** about 1.2 GiB less GPU memory after loading.
+- **Serving settings:** updated in `decision_config.json`.
 
 ## Results
 
-v1.3 has not been measured on the JevBench leaderboard yet.
-
-Our own reads, paired in the same harness (the bundled server or its offline equivalent and the JevBench `typesafe`
-adapter), all at T = 0.9, against the earlier v1.3 build (FULL_v5 weights):
-
-| Set | Earlier v1.3 build (Capability) | v1.3 (Capability) | v1.3 Intelligence / Calibration |
-|---|---|---|---|
-| 231 public JevBench items | 81.55 | 81.4 | 74.9 / 87.9 |
-| Held-out proxy set (proxyA2) | 74.4 | 75.3 | |
-| Independent JevBench replica (2,178 items) | 78.7 | **82.1** (+3.5, significant) | +3.4 / +3.5 over the earlier build (both significant) |
-
-On the public items and our Proxy C set, v1.3 is level with the earlier build; the gain is on the independent
-replica. On the public items, v1.2 at the same T = 0.9 scores Capability 80.3 (as shipped, at T = 1.0: 77.3), against
-81.4 for v1.3. These are our measurements on public or internal items, not leaderboard scores.
-
-### v1.2 (history)
-
-On the JevBench leaderboard (release v1.6.34, as of 2026-10-20), Torchcast Decision 4B v1.2 was
+On the JevBench leaderboard (release v1.7.9, as of 2026-10-27), Torchcast Decision 4B v1.3 is
 **#1 among open-weight models by composite score**:
 
-| Model | Composite | Intelligence | Calibration | Speed | Cost |
-|---|---|---|---|---|---|
-| **Torchcast Decision 4B v1.2** | **73.03** | 60.26 | 84.95 | 91.13 | 64.81 |
-| H2O-Lightning-4B v1.1 | 72.52 | 60.04 | 89.95 | 92.61 | 60.30 |
+| Model | Composite | Capability | Intelligence | Calibration | Speed | Cost |
+|---|---|---|---|---|---|---|
+| **Torchcast Decision 4B v1.3** | **76.16** | **77.50** | **67.15** | 87.85 | 92.45 | 64.81 |
+| H2O-Lightning-4B v1.1 | 73.78 | 75.00 | 60.04 | 89.95 | 92.37 | 64.05 |
+| Torchcast Decision 4B v1.2 | 73.00 | 72.61 | 60.26 | 84.95 | 90.89 | 64.81 |
 
-Source: [benchmarkheaven.com/jev-models](https://benchmarkheaven.com/jev-models). v1.2 was measured on the
-second regular v1.6 draw (anchor runs pending), so scores may be re-placed when the board's anchor
-offsets are applied. These numbers are for v1.2 (tag `v1.2.0`), not v1.3.
+Source: [benchmarkheaven.com/jev-models](https://benchmarkheaven.com/jev-models). Measured by the JevBench maintainers
+at revision `004acea2` (tag `v1.3.0`) with the bundled server and settings, on the second regular v1.6 draw (anchor
+runs pending, so scores may be re-placed when the board's anchor offsets are applied).
 
 ## Run for evaluation
 
